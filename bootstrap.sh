@@ -100,7 +100,12 @@ fi
 eval "$("$brew" shellenv)"
 
 if [[ -d "$dest/.git" ]]; then
-  ok "Repo already at ${dest/#$HOME/~}"
+  # A rerun should get the latest version, not whatever was downloaded last time.
+  if git -C "$dest" pull --ff-only --quiet 2>/dev/null; then
+    ok "Updated ${dest/#$HOME/~}"
+  else
+    ok "Using ${dest/#$HOME/~} as it is"
+  fi
 else
   say "Downloading into ${dest/#$HOME/~}"
   mkdir -p "${dest:h}"
@@ -128,7 +133,7 @@ mise --yes exec "node@$node_version" -- node --version >/dev/null
 ok "Node $node_version"
 
 cd "$dest/app"
-if [[ ! -d node_modules ]]; then
+if [[ ! -d node_modules || package-lock.json -nt node_modules ]]; then
   say "Installing the app's dependencies"
   mise --yes exec "node@$node_version" -- npm ci --silent --no-fund --no-audit
   ok "App ready"

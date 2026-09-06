@@ -6,13 +6,10 @@
 # The label is what the checklist shows, the group is its heading. Add a line to add
 # an app, delete a line to drop it. It is a normal Brewfile too, so `brew bundle` works.
 
-tap "facebook/fb"
-
 # ---- CLI tools ----
 brew "gh"                          # GitHub CLI | Git
 brew "git-lfs"                     # Git LFS | Git
 brew "watchman"                    # Watchman (file watcher for React Native) | Mobile
-brew "facebook/fb/idb-companion"   # idb companion (iOS simulator automation) | Mobile
 brew "uv"                          # uv (Python packages and tools) | Python
 brew "asitop"                      # asitop (Apple Silicon performance monitor) | System
 brew "mole"                        # mole (Mac cleaner) | System

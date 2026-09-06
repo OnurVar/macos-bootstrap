@@ -93,15 +93,78 @@ selected() {
   return 1
 }
 
-# install_from_brewfile <brew|cask>: install the selected entries one by one, so one failure
-# cannot stop the rest. Prints one ✓ or ✗ line per item.
+# ---- live progress: a status line, not a log line ----
+# On a terminal it redraws in place; through the app it becomes a "::progress" line, which the
+# app shows in its status bar and keeps out of the log.
+progress() {
+  if [[ -t 1 ]]; then
+    printf '\r\033[K  %s' "$*"
+  else
+    print -r -- "::progress $*"
+  fi
+}
+progress_end() {
+  if [[ -t 1 ]]; then
+    print
+  fi
+}
+
+human_kb() {
+  local kb=$1
+  if (( kb >= 1048576 )); then
+    printf '%.1f GB' $(( kb / 1048576.0 ))
+  elif (( kb >= 1024 )); then
+    printf '%d MB' $(( kb / 1024 ))
+  else
+    printf '%d KB' "$kb"
+  fi
+}
+
+# prefetch <brew|cask> <what> <name>...: download everything in one `brew fetch`, which
+# Homebrew runs in parallel, while reporting how many are done and how much has landed.
+# Failures are not reported here; the install loop retries each item and reports it properly.
+prefetch() {
+  local kind="$1" what="$2"
+  shift 2
+  local -a names
+  names=("$@")
+  local total=$#names cache out pid before now kb marks manifests finished
+  cache="$(brew --cache 2>/dev/null)/downloads"
+  out="$(mktemp)"
+  before="$(du -sk "$cache" 2>/dev/null | cut -f1)"
+  before="${before:-0}"
+  say "Downloading $total $what at once"
+  brew fetch --"$kind" "${names[@]}" >"$out" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 2
+    now="$(du -sk "$cache" 2>/dev/null | cut -f1)"
+    now="${now:-$before}"
+    kb=$(( now - before ))
+    if (( kb < 0 )); then
+      kb=0
+    fi
+    marks="$(grep -cE '^(✔︎|✘)' "$out" 2>/dev/null || true)"
+    manifests="$(grep -c 'Bottle Manifest' "$out" 2>/dev/null || true)"
+    finished=$(( ${marks:-0} - ${manifests:-0} ))
+    progress "Downloading $finished of $total $what · $(human_kb "$kb") so far"
+  done
+  wait "$pid" || true
+  progress_end
+  rm -f "$out"
+}
+
+# install_from_brewfile <brew|cask>: download every selected entry at once, then install them
+# one by one from the cache, so one failure cannot stop the rest. Prints one ✓ or ✗ per item.
 install_from_brewfile() {
-  local kind="$1"
-  local -a installed
-  local line name label group failed=0 count=0
+  local kind="$1" what
+  local -a installed todo todo_labels
+  local line name label failed=0 count=0 i
   if [[ "$kind" == cask ]]; then
+    what="apps"
     installed=(${(f)"$(brew list --cask -1 2>/dev/null)"})
   else
+    what="tools"
     installed=(${(f)"$(brew list --formula -1 2>/dev/null)"})
   fi
   for line in ${(f)"$(brewfile_entries "$kind")"}; do
@@ -113,6 +176,29 @@ install_from_brewfile() {
       ok "$label (already installed)"
       continue
     fi
+    todo+=("$name")
+    todo_labels+=("$label")
+  done
+  if (( count == 0 )); then
+    note "Nothing selected"
+    return 0
+  fi
+  if (( $#todo == 0 )); then
+    return 0
+  fi
+
+  # The downloads are the slow part, so do them all together first.
+  if (( $#todo > 1 )); then
+    if (( DRY )); then
+      run brew fetch --"$kind" "${todo[@]}"
+    else
+      prefetch "$kind" "$what" "${todo[@]}"
+    fi
+  fi
+
+  for (( i = 1; i <= $#todo; i++ )); do
+    name="${todo[$i]}"
+    label="${todo_labels[$i]}"
     say "Installing $label"
     if [[ "$kind" == cask ]]; then
       run brew install --cask --adopt --quiet "$name" || { fail "$label"; failed=$((failed + 1)); continue }
@@ -121,6 +207,5 @@ install_from_brewfile() {
     fi
     ok "$label"
   done
-  (( count )) || note "Nothing selected"
   (( failed == 0 ))
 }

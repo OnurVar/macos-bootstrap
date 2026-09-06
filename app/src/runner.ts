@@ -1,7 +1,7 @@
 // Runs one step script and turns its output into events. This is the only place the app
 // touches the shell; the steps do the actual work.
 
-import {spawn, type ChildProcess} from 'node:child_process';
+import {execFileSync, spawn, type ChildProcess} from 'node:child_process';
 import readline from 'node:readline';
 
 export type RunEvent = {type: 'ok' | 'fail' | 'current'; label: string};
@@ -12,16 +12,42 @@ export const stripAnsi = (s: string): string => s.replace(ANSI, '');
 
 let current: ChildProcess | undefined;
 
-// Steps run in their own process group (see `detached` below), so one signal reaches the whole
-// tree: the step's zsh, the brew it started, and whatever brew started.
+// Every process under `pid`, found by walking the process table. Steps must stay attached to
+// our terminal (macOS sudo keys its cached password to the terminal, and the .pkg installers
+// need it), so they cannot be put in their own process group; this walk is how Ctrl-C still
+// reaches brew and whatever brew started.
+function descendants(pid: number): number[] {
+  let table: string;
+  try {
+    table = execFileSync('ps', ['-axo', 'pid=,ppid='], {encoding: 'utf8'});
+  } catch {
+    return [];
+  }
+  const children = new Map<number, number[]>();
+  for (const line of table.split('\n')) {
+    const [p, pp] = line.trim().split(/\s+/).map(Number);
+    if (!p || !pp) continue;
+    const list = children.get(pp);
+    if (list) list.push(p);
+    else children.set(pp, [p]);
+  }
+  const found: number[] = [];
+  const stack = [pid];
+  while (stack.length) {
+    for (const c of children.get(stack.pop()!) ?? []) {
+      found.push(c);
+      stack.push(c);
+    }
+  }
+  return found;
+}
+
 export function killCurrent(): void {
   const child = current;
   if (!child?.pid) return;
-  try {
-    process.kill(-child.pid, 'SIGTERM');
-  } catch {
+  for (const pid of [...descendants(child.pid).reverse(), child.pid]) {
     try {
-      child.kill('SIGTERM');
+      process.kill(pid, 'SIGTERM');
     } catch {
       // Already gone.
     }
@@ -35,13 +61,18 @@ export function runStep(opts: {
   onEvent?: (ev: RunEvent) => void;
 }): Promise<RunResult> {
   return new Promise((resolve) => {
-    const child = spawn('zsh', [opts.file], {env: opts.env, stdio: ['ignore', 'pipe', 'pipe'], detached: true});
+    const child = spawn('zsh', [opts.file], {env: opts.env, stdio: ['ignore', 'pipe', 'pipe']});
     current = child;
     let ok = 0;
     let failed = 0;
     const handle = (raw: string) => {
       const line = stripAnsi(raw).replace(/\s+$/, '');
       const t = line.trim();
+      // A live status, such as download progress: shown in the status line, kept out of the log.
+      if (t.startsWith('::progress ')) {
+        opts.onEvent?.({type: 'current', label: t.slice(11)});
+        return;
+      }
       if (t.startsWith('✓ ')) {
         ok++;
         opts.onEvent?.({type: 'ok', label: t.slice(2)});

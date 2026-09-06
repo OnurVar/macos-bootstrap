@@ -175,6 +175,11 @@ time zsh -i -c exit         # well under half a second
 - **React Native on iOS.** Xcode runs its build scripts in a shell where mise is not
   activated. Put `export NODE_BINARY="$(/opt/homebrew/bin/mise which node)"` in the
   project's `.xcode.env.local`.
+- **Apps download all at once.** The Applications and CLI tools steps fetch every ticked item in
+  one go, which Homebrew does in parallel, and install from the cache afterwards. The status line
+  shows how many downloads are done and how much has landed.
+- **idb-companion** (iOS simulator automation) needs the full Xcode to build, so it is not in the
+  Brewfile. Once Xcode is installed: `brew install facebook/fb/idb-companion`.
 - **Android.** Android Studio's first-run wizard installs the SDK into
   `~/Library/Android/sdk`, which is where the shell config already points.
 - **Coming from nvm, pyenv and rbenv.** Once mise has the runtimes, the old managers can go:

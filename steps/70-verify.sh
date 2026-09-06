@@ -24,9 +24,15 @@ fresh() {
 }
 
 problems=0
+gaps=0
 broken() {
   fail "$1"
   problems=$(( problems + 1 ))
+}
+# Overrides the shared warn so every "missing" note is counted for the closing line.
+warn() {
+  print -P "%F{yellow}!%f ${*//\%/%%}"
+  gaps=$(( gaps + 1 ))
 }
 
 # ---- folders and macOS settings ----
@@ -65,7 +71,7 @@ else
   warn "Homebrew is not installed"
 fi
 
-fresh_mise="$(fresh 'command -v mise')"
+fresh_mise="$(fresh 'whence -p mise')"
 if [[ -n "$fresh_mise" ]]; then
   ok "mise       $(fresh 'mise --version') at $fresh_mise"
 elif has mise; then
@@ -196,4 +202,8 @@ if (( problems )); then
   fail "$problems thing(s) look wrong above"
   exit 1
 fi
-ok "Everything checks out"
+if (( gaps )); then
+  ok "Nothing is broken. $gaps thing(s) above are not installed or not set up."
+else
+  ok "Everything checks out"
+fi
