@@ -11,7 +11,7 @@ import {DetailPane, Header, Hints, LogPane, PromptPane, STEPS_WIDTH, StatusLine,
 import {promptsFor, type PromptSpec} from './prompts';
 import {killCurrent, notify, runStep, sudoKeepalive} from './runner';
 import {discoverSteps, type ItemKind} from './steps';
-import {gitEmail, inspectSystem, type SystemInfo} from './system';
+import {gitEmail, inspectSystem, repoVersion, type SystemInfo} from './system';
 import type {Item, Phase, Status, StepState} from './types';
 
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
@@ -39,6 +39,7 @@ export function App({
   const [items, setItems] = useState<Record<ItemKind, Item[]>>({brew: [], cask: []});
   const [miseTools, setMiseTools] = useState<string[]>([]);
   const [email, setEmail] = useState('');
+  const [version, setVersion] = useState('');
   const [dryRun, setDryRun] = useState(initialDryRun);
   const [pane, setPane] = useState<'steps' | 'detail'>('steps');
   const [view, setView] = useState<'detail' | 'log'>('detail');
@@ -81,13 +82,15 @@ export function App({
 
   useEffect(() => {
     (async () => {
-      const [found, brewText, sysInfo, miseText, mail] = await Promise.all([
+      const [found, brewText, sysInfo, miseText, mail, ver] = await Promise.all([
         discoverSteps(root),
         fs.readFile(path.join(root, 'Brewfile'), 'utf8'),
         inspectSystem(),
         fs.readFile(path.join(root, 'config', 'mise.toml'), 'utf8').catch(() => ''),
         gitEmail(),
+        repoVersion(root),
       ]);
+      setVersion(ver);
       const parsed = parseBrewfile(brewText);
       const build = (kind: ItemKind): Item[] =>
         parsed
@@ -210,7 +213,7 @@ export function App({
     setSummary('');
     const file = new LogFile(logPath);
     file.header([
-      `macos-bootstrap ${new Date().toISOString()}${dryRun ? ' (dry run)' : ''}`,
+      `macos-bootstrap ${version} · ${new Date().toISOString()}${dryRun ? ' (dry run)' : ''}`,
       ...plan.map((s) => `  ${s.label}${s.items ? ': ' + snapshot[s.items].filter((i) => i.selected).map((i) => i.name).join(', ') : ''}`),
     ]);
     const stopSudo = !dryRun && answers.current.sudo ? sudoKeepalive() : () => {};
@@ -301,7 +304,7 @@ export function App({
     if (!dryRun) notify('macos-bootstrap', failedSteps.length ? `Finished with problems. ${text}` : `Your Mac is ready. ${text}`);
 
     // The screen goes away on quit, so hand the useful parts back to the normal terminal.
-    const closing = [`macos-bootstrap · ${text}`, `Log: ${shortPath(logPath)}`];
+    const closing = [`macos-bootstrap ${version} · ${text}`, `Log: ${shortPath(logPath)}`];
     if (pubKeys.current.length) {
       closing.push('', 'Add these public keys to your accounts:');
       for (const key of pubKeys.current) closing.push(`  ${key}`);
@@ -422,7 +425,7 @@ export function App({
 
   return (
     <Box flexDirection="column" width={cols} height={rows}>
-      <Header sys={sys} dryRun={dryRun} />
+      <Header sys={sys} dryRun={dryRun} version={version} />
       <Box flexGrow={1}>
         <StepsPane steps={steps} items={items} cursor={cursor} focused={pane === 'steps' && phase === 'select'} height={paneHeight} spinner={spinner} />
         {right}

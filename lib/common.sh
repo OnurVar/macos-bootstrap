@@ -31,6 +31,11 @@ note()  { print -P "  %F{244}${*//\%/%%}%f" }
 
 has() { command -v "$1" >/dev/null 2>&1 }
 
+# The commit this copy of the repo is at, e.g. "c3b5421 from 2026-09-06".
+bootstrap_version() {
+  git -C "$ROOT" log -1 --format='%h from %cs' 2>/dev/null || print -r -- unknown
+}
+
 # pretty <path>: shorten the repo and $HOME in messages.
 pretty() {
   local p="$1"

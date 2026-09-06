@@ -7,12 +7,15 @@ import type {PromptSpec} from './prompts';
 import type {SystemInfo} from './system';
 import type {Item, Phase, StepState} from './types';
 
-export function Header({sys, dryRun}: {sys: SystemInfo | null; dryRun: boolean}) {
+export function Header({sys, dryRun, version}: {sys: SystemInfo | null; dryRun: boolean; version: string}) {
   const facts = sys ? `macOS ${sys.macos} · ${sys.chip} · ${sys.freeGb} GB free` : 'checking this Mac…';
   return (
     <Box justifyContent="space-between" paddingX={1}>
-      <Text bold color="magenta">
-        macos-bootstrap
+      <Text>
+        <Text bold color="magenta">
+          macos-bootstrap
+        </Text>
+        {version ? <Text dimColor> {version}</Text> : null}
       </Text>
       <Text>
         <Text dimColor>{facts}</Text>

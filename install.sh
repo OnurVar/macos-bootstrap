@@ -76,6 +76,7 @@ else
   selected=({1..$#keys})
 fi
 
+note "macos-bootstrap $(bootstrap_version)"
 (( DRY )) && warn "Dry run: nothing will be changed"
 
 typeset -a passed failed

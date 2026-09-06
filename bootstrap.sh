@@ -112,6 +112,7 @@ else
   git clone --quiet "$repo" "$dest"
   ok "Downloaded"
 fi
+ok "Version $(git -C "$dest" log -1 --format='%h from %cs' 2>/dev/null || print unknown)"
 
 if (( unattended )); then
   exec "$dest/install.sh" "$@"

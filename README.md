@@ -45,7 +45,9 @@ Want to look before anything changes? Add `-- --dry-run`. Want no app at all? Ad
   quits; nothing keeps installing behind a closed screen.
 - Afterwards, a summary line and a macOS notification. Quitting prints the summary, the public
   keys to add to GitHub and GitLab, and the path of the full log, so they survive the
-  full-screen view closing. The log is `last-run.log` inside the repo folder.
+  full-screen view closing. The log is `last-run.log` inside the repo folder, and its first line
+  names the version that ran (the git commit and its date), which also shows in the app's header
+  and in bootstrap's output. Handy when asking whether a fix has arrived.
 
 ## What the steps do
 

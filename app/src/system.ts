@@ -58,6 +58,11 @@ export async function inspectSystem(): Promise<SystemInfo> {
   };
 }
 
+// The commit this copy of the repo is at, e.g. "c3b5421 from 2026-09-06".
+export async function repoVersion(root: string): Promise<string> {
+  return (await out('git', ['-C', root, 'log', '-1', '--format=%h from %cs'])) || 'unknown';
+}
+
 export async function gitEmail(): Promise<string> {
   return out('git', ['config', '--global', 'user.email']);
 }
