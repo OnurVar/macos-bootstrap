@@ -2,6 +2,9 @@
 // touches the shell; the steps do the actual work.
 
 import {execFileSync, spawn, type ChildProcess} from 'node:child_process';
+import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import readline from 'node:readline';
 
 export type RunEvent = {type: 'ok' | 'fail' | 'current'; label: string};
@@ -95,6 +98,19 @@ export function runStep(opts: {
       resolve({code, ok, failed});
     });
   });
+}
+
+// A .pkg installer runs `sudo`, which cannot prompt from underneath a full-screen UI, and
+// whose cached ticket can expire during a long download. An askpass helper hands the password
+// over with no terminal and no ticket involved: Homebrew adds `sudo -A` when SUDO_ASKPASS is
+// set. The file holds the password, so it is mode 700 inside a private directory and is
+// deleted the moment the run is over.
+export function makeAskpass(password: string): {path: string; cleanup: () => void} {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'macos-bootstrap-'));
+  const file = path.join(dir, 'askpass');
+  const quoted = `'${password.replace(/'/g, `'\\''`)}'`;
+  writeFileSync(file, `#!/bin/sh\nprintf '%s\\n' ${quoted}\n`, {mode: 0o700});
+  return {path: file, cleanup: () => rmSync(dir, {recursive: true, force: true})};
 }
 
 // sudo: validate the password once, then keep the timestamp fresh while steps run,

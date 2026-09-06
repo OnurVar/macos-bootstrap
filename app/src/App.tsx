@@ -9,7 +9,7 @@ import {LogFile} from './log';
 import {parseMiseTools} from './mise';
 import {DetailPane, Header, Hints, LogPane, PromptPane, STEPS_WIDTH, StatusLine, StepsPane} from './panes';
 import {promptsFor, type PromptSpec} from './prompts';
-import {killCurrent, notify, runStep, sudoKeepalive} from './runner';
+import {killCurrent, makeAskpass, notify, runStep, sudoKeepalive} from './runner';
 import {discoverSteps, type ItemKind} from './steps';
 import {gitEmail, inspectSystem, repoVersion, type SystemInfo} from './system';
 import type {Item, Phase, Status, StepState} from './types';
@@ -216,7 +216,14 @@ export function App({
       `macos-bootstrap ${version} · ${new Date().toISOString()}${dryRun ? ' (dry run)' : ''}`,
       ...plan.map((s) => `  ${s.label}${s.items ? ': ' + snapshot[s.items].filter((i) => i.selected).map((i) => i.name).join(', ') : ''}`),
     ]);
-    const stopSudo = !dryRun && answers.current.sudo ? sudoKeepalive() : () => {};
+    const useSudo = !dryRun && Boolean(answers.current.sudo);
+    const stopSudo = useSudo ? sudoKeepalive() : () => {};
+    // Lets the .pkg installers get the password without a terminal (see makeAskpass).
+    const askpass = useSudo ? makeAskpass(answers.current.sudo) : undefined;
+    const cleanUp = () => {
+      stopSudo();
+      askpass?.cleanup();
+    };
     const weights = plan.map((s) => (s.items ? snapshot[s.items].filter((i) => i.selected).length : 1));
     const total = weights.reduce((a, b) => a + b, 0);
     let before = 0;
@@ -254,6 +261,7 @@ export function App({
       delete env.BOOTSTRAP_PASSPHRASE;
       if (s.needs.includes('email')) env.BOOTSTRAP_EMAIL = answers.current.email ?? email;
       if (s.needs.includes('passphrase')) env.BOOTSTRAP_PASSPHRASE = answers.current.passphrase ?? '';
+      if (s.needs.includes('sudo') && askpass) env.SUDO_ASKPASS = askpass.path;
       const result = await runStep({
         file: s.file,
         env,
@@ -280,7 +288,7 @@ export function App({
       patchStep(s.key, {status});
     }
 
-    stopSudo();
+    cleanUp();
     if (aborted.current) {
       append('');
       append('Stopped before finishing.');
