@@ -57,9 +57,28 @@ Want to look before anything changes? Add `-- --dry-run`. Want no app at all? Ad
 | CLI tools | The `brew` lines of the Brewfile, each a checkbox. |
 | Runtimes | mise installs Node, Ruby, Python, Java, yarn and eas-cli from `config/mise.toml`, then cocoapods as a gem and specify as a uv tool. |
 | Applications | The `cask` lines of the Brewfile, each a checkbox, grouped. |
+| Check | Opens a clean new terminal and reports what it finds: Homebrew, mise, the Android paths, the SSH keys, the runtimes, and how much of the Brewfile is installed. |
 
 Every step is safe to rerun: existing folders, keys, files and apps are left alone, and one
 failing item never stops the rest. To add something later, run the one-liner again.
+
+## Checking the result
+
+The Check step runs last and reports whether the setup actually took. It matters because the
+question is not whether the installer's own shell worked, it is whether a **new terminal**
+works, so every shell-dependent check runs in a clean login shell rather than in the
+installer's environment.
+
+Run it again whenever you want, without touching anything else:
+
+```sh
+cd ~/Downloads/macos-bootstrap
+./install.sh --yes --only verify
+```
+
+Something missing because you chose not to install it is a yellow note. Only something
+actually wrong, like a key with the wrong permissions or a mise that a new terminal cannot
+see, is a red failure and makes the step exit non-zero.
 
 ## Changing what gets installed
 
