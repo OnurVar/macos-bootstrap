@@ -1,0 +1,26 @@
+# ~/.zshrc, copied here from macos-bootstrap/config/zshrc by the Shell step.
+# Machine-specific lines belong in ~/.zshrc.local, which is loaded at the end and never touched.
+
+# Homebrew
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+# mise: Node, Ruby, Python and Java versions. Also sets JAVA_HOME.
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
+# Android SDK (installed by Android Studio's first-run wizard)
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools"
+
+# Tools that install into ~/.local/bin (uv tools, claude, ...)
+export PATH="$HOME/.local/bin:$PATH"
+
+# Local overrides
+if [[ -f "$HOME/.zshrc.local" ]]; then
+  source "$HOME/.zshrc.local"
+fi

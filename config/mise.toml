@@ -1,0 +1,15 @@
+# Global tool versions. The Runtimes step copies this file to ~/.config/mise/config.toml.
+# A project's own mise.toml, .nvmrc, .node-version, .ruby-version or .python-version wins over it.
+# Add a runtime or a global npm tool: one line under [tools].
+
+[settings]
+# Honour the version files other tools left behind (.nvmrc, .ruby-version, .python-version).
+idiomatic_version_file_enable_tools = ["node", "ruby", "python"]
+
+[tools]
+node = "24"              # active LTS; bootstrap.sh runs the app on this one
+ruby = "3.4"
+python = "3.13"
+java = "zulu-17"         # what React Native and the Android Gradle plugin expect
+"npm:yarn" = "latest"
+"npm:eas-cli" = "latest"
