@@ -42,8 +42,7 @@ cask "mos"                # Mos | Utilities
 cask "mx-power-gadget"    # MX Power Gadget | Utilities
 cask "tg-pro"             # TG Pro | Utilities
 cask "openvpn-connect"    # OpenVPN Connect | Utilities
-cask "vnc-viewer"         # RealVNC Viewer | Utilities
-cask "vnc-server"         # RealVNC Server | Utilities
+cask "realvnc-connect"    # RealVNC Connect (viewer and server) | Utilities
 
 cask "libreoffice"        # LibreOffice | Office
 cask "paintbrush"         # Paintbrush | Office
