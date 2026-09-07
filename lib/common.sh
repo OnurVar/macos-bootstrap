@@ -189,9 +189,11 @@ install_one() {
     elapsed=$(( $(date +%s) - started ))
     (( elapsed < 1 )) && elapsed=1
     rate_kbs=$(( kb / elapsed ))
-    if (( size_kb > 0 && kb > 0 )); then
+    if (( size_kb > 0 && kb >= size_kb )); then
+      # The bytes are all here; what is left is unpacking and moving it into place.
+      detail="$(bar 100) $(human_kb "$size_kb") downloaded · installing"
+    elif (( size_kb > 0 && kb > 0 )); then
       pct=$(( kb * 100 / size_kb ))
-      (( pct > 99 )) && pct=99
       detail="$(bar "$pct") $pct% · $(human_kb "$kb") / $(human_kb "$size_kb")"
       if (( rate_kbs > 0 )); then
         detail="$detail · $(human_kb "$rate_kbs")/s"

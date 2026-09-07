@@ -201,8 +201,23 @@ function LogLine({line}: {line: string}) {
   return <Text wrap="truncate">{line}</Text>;
 }
 
-export function LogPane({lines, height, width, scroll, path}: {lines: string[]; height: number; width: number; scroll: number; path: string}) {
-  const inner = Math.max(1, height - 3);
+export function LogPane({
+  lines,
+  height,
+  width,
+  scroll,
+  path,
+  live = '',
+}: {
+  lines: string[];
+  height: number;
+  width: number;
+  scroll: number;
+  path: string;
+  // The download happening right now, drawn under the log rather than in the footer.
+  live?: string;
+}) {
+  const inner = Math.max(1, height - 3 - (live ? 1 : 0));
   const end = Math.max(0, lines.length - scroll);
   const shown = lines.slice(Math.max(0, end - inner), end);
   return (
@@ -220,6 +235,11 @@ export function LogPane({lines, height, width, scroll, path}: {lines: string[]; 
       {shown.map((l, i) => (
         <LogLine key={`${end - shown.length + i}`} line={l} />
       ))}
+      {live ? (
+        <Text color="cyan" wrap="truncate">
+          {live}
+        </Text>
+      ) : null}
     </Box>
   );
 }

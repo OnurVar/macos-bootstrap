@@ -54,6 +54,7 @@ export function App({
   const [busy, setBusy] = useState(false);
   const [overall, setOverall] = useState({done: 0, total: 0});
   const [current, setCurrent] = useState('');
+  const [live, setLive] = useState('');
   const [summary, setSummary] = useState('');
   const [tick, setTick] = useState(0);
   const answers = useRef<Record<string, string>>({});
@@ -246,6 +247,7 @@ export function App({
       const names = s.items ? snapshot[s.items].filter((i) => i.selected).map((i) => i.name) : [];
       patchStep(s.key, {status: 'running', ok: 0, failed: 0});
       setCurrent(s.label);
+      setLive('');
       let ok = 0;
       let failed = 0;
       // A secret goes only to the step that declared it in its `# needs:` header, so brew,
@@ -267,7 +269,12 @@ export function App({
         env,
         onLine: append,
         onEvent: (ev) => {
-          if (ev.type === 'current') setCurrent(ev.label);
+          if (ev.type === 'progress') setLive(ev.label);
+          // A new item starts: drop the previous item's download line.
+          if (ev.type === 'current') {
+            setCurrent(ev.label);
+            setLive('');
+          }
           if (ev.type === 'ok') {
             ok++;
             patchStep(s.key, {ok});
@@ -294,6 +301,7 @@ export function App({
       append('Stopped before finishing.');
       file.close();
       setCurrent('');
+      setLive('');
       setPhase('finished');
       return;
     }
@@ -307,6 +315,7 @@ export function App({
     append('Open a new terminal, or run: exec zsh');
     file.close();
     setCurrent('');
+    setLive('');
     setSummary(text);
     setPhase('finished');
     if (!dryRun) notify('macos-bootstrap', failedSteps.length ? `Finished with problems. ${text}` : `Your Mac is ready. ${text}`);
@@ -424,7 +433,7 @@ export function App({
       />
     );
   } else if (showLog) {
-    right = <LogPane lines={log} height={paneHeight} width={rightWidth} scroll={logScroll} path={logPath.replace(process.env.HOME ?? '', '~')} />;
+    right = <LogPane lines={log} height={paneHeight} width={rightWidth} scroll={logScroll} live={live} path={logPath.replace(process.env.HOME ?? '', '~')} />;
   } else {
     right = (
       <DetailPane step={step} items={items} itemCursor={itemCursor} focused={pane === 'detail' && phase === 'select'} height={paneHeight} width={rightWidth} miseTools={miseTools} />

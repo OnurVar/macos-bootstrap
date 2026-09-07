@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 
-export type RunEvent = {type: 'ok' | 'fail' | 'current'; label: string};
+export type RunEvent = {type: 'ok' | 'fail' | 'current' | 'progress'; label: string};
 export type RunResult = {code: number | null; ok: number; failed: number};
 
 const ANSI = /\x1b\[[0-9;?]*[A-Za-z]/g;
@@ -73,7 +73,7 @@ export function runStep(opts: {
       const t = line.trim();
       // A live status, such as download progress: shown in the status line, kept out of the log.
       if (t.startsWith('::progress ')) {
-        opts.onEvent?.({type: 'current', label: t.slice(11)});
+        opts.onEvent?.({type: 'progress', label: t.slice(11)});
         return;
       }
       if (t.startsWith('✓ ')) {
