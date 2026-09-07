@@ -1,7 +1,7 @@
 # macos-bootstrap
 
-Sets up a fresh Mac from one command. A terminal app asks what you want, installs it,
-and the folder it ran from can go straight to the bin.
+Sets up a fresh Mac from one command. A terminal app asks what you want and installs it.
+The folder it runs from is disposable.
 
 ## Run
 
@@ -9,135 +9,116 @@ and the folder it ran from can go straight to the bin.
 /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/OnurVar/macos-bootstrap/main/bootstrap.sh)"
 ```
 
-That is all a new Mac needs. The command installs the Xcode Command Line Tools and
-Homebrew, downloads this repo into `~/Downloads/macos-bootstrap`, and opens the app.
-You click through the Command Line Tools dialog and type your password once; the rest
-is the app.
+Installs the Xcode Command Line Tools and Homebrew, downloads this repo to
+`~/Downloads/macos-bootstrap`, and opens the app. You click through one dialog and type your
+password once.
 
-Want to look before anything changes? Add `-- --dry-run`. Want no app at all? Add
-`-- --yes` and every step runs unattended.
+Add `-- --dry-run` to preview without changing anything, or `-- --yes` to run everything
+unattended with no app.
 
 ## The app
 
 ```
- macos-bootstrap                          macOS 26.6 · M4 Pro · 412 GB free
-┌ Steps ───────────────────┐┌ Detail ─────────────────────────────────────┐
-│ ▸ [x] System        ·    ││ Applications                                │
-│   [x] Shell         ·    ││ Mac apps from Homebrew · pick which ones    │
-│   [x] SSH keys      ·    ││                                             │
-│   [x] CLI tools     7/7  ││ Daily                                       │
-│   [x] Runtimes      ·    ││   [x] Google Chrome                         │
-│   [x] Applications  30/30││   [x] Firefox                               │
-└──────────────────────────┘└─────────────────────────────────────────────┘
- 6 steps ticked · enter starts
- ↑↓ move · space tick · → items · a all/none · tab log · d dry run · enter start · q quit
+ macos-bootstrap 7904314 from 2026-09-07       macOS 26.6 · M4 Pro · 412 GB free
+┌ Steps ───────────────────┐┌ Log ─────────────────────────────────────────┐
+│   [x] System        ✓    ││ ==> Installing Slack  (5 of 26)              │
+│   [x] Shell         ✓    ││ Slack · ██████░░░░ 61% · 107 MB / 175 MB     │
+│ ▸ [x] Applications  5/26 ││ ✓ Figma  (128 MB in 7s)                      │
+└──────────────────────────┘└──────────────────────────────────────────────┘
+ ████████░░░░░░░░ 12/32  Installing Slack
 ```
 
-- Everything starts ticked. Press enter for a full install.
-- `→` opens the items of CLI tools or Applications; space ticks one, `a` ticks all or none.
-- `d` switches dry run on or off: the same run, but the log shows every command and nothing changes.
-- Before the first step it asks what it needs, once: the email and passphrase for the SSH keys,
-  your password for the installers that use sudo. Nothing underneath ever prompts. The
-  passphrase is asked twice, because a typo there makes keys that nobody can unlock.
-- Each answer goes only to the step that asked for it, so the passphrase is never in the
-  environment of the steps that install apps.
-- While it runs, the right pane is the live log. Ctrl-C stops the step that is running and
-  quits; nothing keeps installing behind a closed screen.
-- Afterwards, a summary line and a macOS notification. Quitting prints the summary, the public
-  keys to add to GitHub and GitLab, and the path of the full log, so they survive the
-  full-screen view closing. The log is `last-run.log` inside the repo folder, and its first line
-  names the version that ran (the git commit and its date), which also shows in the app's header
-  and in bootstrap's output. Handy when asking whether a fix has arrived.
+`↑↓` move · `space` tick · `→←` item list · `a` all or none · `tab` detail or log ·
+`d` dry run · `enter` start · `ctrl-c` stop and quit · `q` quit
 
-## What the steps do
+Everything starts ticked, so enter installs the lot. Anything already installed is skipped.
 
-| Step | What happens |
+Before the first step the app asks for the SSH key email, a passphrase (twice), and your
+password for `sudo`. Nothing underneath prompts again, and each answer only reaches the step
+that asked for it. On quitting it prints the summary, the public keys to add to GitHub and
+GitLab, and the path of `last-run.log`.
+
+## Steps
+
+| Step | What it does |
 |---|---|
-| System | Creates `~/Projects` and `~/Storage`. Finder shows all file extensions. |
-| Shell | Copies `config/zshrc` to `~/.zshrc` (Homebrew, mise, Android paths). The old file is kept as a backup. Machine-only lines belong in `~/.zshrc.local`. |
-| SSH keys | ed25519 keys for GitHub and GitLab, host blocks in `~/.ssh/config`, passphrases in Keychain. Prints the public keys to add. |
-| CLI tools | The `brew` lines of the Brewfile, each a checkbox. |
-| Runtimes | mise installs Node, Ruby, Python, Java, yarn and eas-cli from `config/mise.toml`, then cocoapods as a gem and specify as a uv tool. |
-| Applications | The `cask` lines of the Brewfile, each a checkbox, grouped. |
-| Check | Opens a clean new terminal and reports what it finds: Homebrew, mise, the Android paths, the SSH keys, the runtimes, and how much of the Brewfile is installed. |
+| System | `~/Projects`, `~/Storage`, Finder shows file extensions |
+| Shell | Copies `config/zshrc` to `~/.zshrc`, old one kept as a backup. Machine-only lines go in `~/.zshrc.local` |
+| SSH keys | ed25519 keys for GitHub and GitLab, `~/.ssh/config` entries, Keychain |
+| CLI tools | The `brew` lines of the Brewfile |
+| Runtimes | Node, Ruby, Python, Java, yarn and eas-cli via mise, then cocoapods and specify |
+| Applications | The `cask` lines of the Brewfile |
+| Check | Opens a clean new terminal and reports what it finds |
 
-Every step is safe to rerun: existing folders, keys, files and apps are left alone, and one
-failing item never stops the rest. To add something later, run the one-liner again.
+Every step is safe to rerun, and one failing item never stops the rest. Run the one-liner again
+to add something later.
 
-## Checking the result
+## Check
 
-The Check step runs last and reports whether the setup actually took. It matters because the
-question is not whether the installer's own shell worked, it is whether a **new terminal**
-works, so every shell-dependent check runs in a clean login shell rather than in the
-installer's environment.
-
-Run it again whenever you want, without touching anything else:
+Runs last, and on its own any time:
 
 ```sh
 cd ~/Downloads/macos-bootstrap
 ./install.sh --yes --only verify
 ```
 
-Something missing because you chose not to install it is a yellow note. Only something
-actually wrong, like a key with the wrong permissions or a mise that a new terminal cannot
-see, is a red failure and makes the step exit non-zero.
+It checks inside a clean login shell, so it tests what a new terminal actually gets, not what
+the installer's own shell had. Something you chose not to install is a yellow note; something
+broken is a red failure and exits non-zero.
 
-## Changing what gets installed
+## Changing things
 
-- **An app or a CLI tool** is one line in `Brewfile`: `cask "name"   # Label | Group` or
-  `brew "name"   # Label | Group`. The label is what the checklist shows, the group its heading.
-  Delete the line to drop it.
-- **A runtime** is one line under `[tools]` in `config/mise.toml`. Gems and uv tools are the
-  two arrays at the top of `steps/50-runtimes.sh`.
-- **The shell config** is `config/zshrc`.
-- **A new step** is a file `steps/NN-name.sh`. The app reads its header:
+| What | Where |
+|---|---|
+| Apps and CLI tools | `Brewfile` — `cask "name"   # Label \| Group` |
+| Runtime versions | `config/mise.toml`, under `[tools]` |
+| Gems and uv tools | `steps/50-runtimes.sh`, two arrays at the top |
+| Shell config | `config/zshrc` |
+| Folders created | `steps/10-system.sh` |
+| SSH hosts and key names | `steps/30-ssh.sh` |
+| A new prompt | `app/src/prompts.ts` |
 
-  ```sh
-  # label: Applications              shown in the left pane
-  # desc: Mac apps from Homebrew     one line under the label
-  # items: cask                      per-item checklist from the Brewfile (brew or cask)
-  # needs: sudo                      prompts to ask first: email, passphrase, sudo
-  # does: Install the ticked apps    one line per thing it does, shown in the detail pane
-  ```
+The Brewfile holds names, not URLs, so Homebrew always fetches the current version. Versions in
+`mise.toml` are major only (`ruby = "3.4"`), so patch updates come free.
 
-  A step never asks anything. It reads `BOOTSTRAP_DRY_RUN`, `BOOTSTRAP_SELECT`,
-  `BOOTSTRAP_EMAIL` and `BOOTSTRAP_PASSPHRASE` from the environment, wraps anything that
-  changes the system in `run` so dry run keeps working, and reports with `✓ name` and
-  `✗ name` lines, which the app counts. `lib/common.sh` has the helpers.
-- **A new kind of prompt** is one entry in `app/src/prompts.ts`.
+A new step is a file `steps/NN-name.sh` with a header:
+
+```sh
+# label: Applications              shown in the left pane
+# desc: Mac apps from Homebrew     one line under the label
+# items: cask                      per-item checklist from the Brewfile
+# needs: sudo                      what to ask for: email, passphrase, sudo
+# does: Install the ticked apps    shown in the detail pane
+```
+
+Steps never prompt. They read `BOOTSTRAP_DRY_RUN`, `BOOTSTRAP_SELECT`, `BOOTSTRAP_EMAIL` and
+`BOOTSTRAP_PASSPHRASE`, wrap anything that changes the system in `run` so dry run keeps working,
+and report `✓ name` and `✗ name`, which the app counts. Helpers are in `lib/common.sh`.
 
 ## Without the app
 
 ```sh
-./install.sh --yes                    # every step, every item
-./install.sh --yes --only ssh,apps    # only these steps
-./install.sh --yes --select slack,gh  # only these Brewfile names
-./install.sh --yes --dry-run          # show what would change
-./install.sh --list                   # the step names
+./install.sh --yes                    # everything
+./install.sh --yes --only ssh,apps    # these steps
+./install.sh --yes --select slack,gh  # these Brewfile names
+./install.sh --yes --dry-run          # preview
+./install.sh --list                   # step names
 ```
 
 ## Layout
 
 ```
-bootstrap.sh       one-liner target: Command Line Tools, Homebrew, download, start the app
-app/               the app: Ink + TypeScript, run by the Node that mise installs
-  src/App.tsx        state and the run loop
-  src/panes.tsx      the screen
-  src/runner.ts      spawns steps, streams output, sudo, notifications
-  src/steps.ts       reads the step headers
-  src/brewfile.ts    reads the Brewfile
-  src/prompts.ts     the prompt registry
-steps/             the six step scripts, silent and driven by the environment
-lib/common.sh      shared helpers: run, copy_file, Brewfile parsing, output
-Brewfile           apps and CLI tools
-config/            zshrc, mise.toml
-install.sh         the unattended way
-test/run.sh        every check, in a throwaway home
+bootstrap.sh    Command Line Tools, Homebrew, download, start the app
+app/src/        the app: App.tsx, panes.tsx, runner.ts, steps.ts, brewfile.ts, prompts.ts
+steps/          one file per step, silent, driven by the environment
+lib/common.sh   run, copy_file, Brewfile parsing, progress, output
+Brewfile        apps and CLI tools
+config/         zshrc, mise.toml
+install.sh      the unattended way
+test/run.sh     every check, against a throwaway home
 ```
 
-The app runs on Node through mise, the same Node the Runtimes step keeps, so nothing extra
-stays on the Mac. bootstrap.sh installs mise, lets it fetch the Node version named in
-`config/mise.toml`, installs the app's dependencies, and starts it.
+The app runs on the Node that mise installs, so nothing extra stays on the Mac.
 
 ## Testing
 
@@ -145,45 +126,24 @@ stays on the Mac. bootstrap.sh installs mise, lets it fetch the Node version nam
 test/run.sh
 ```
 
-Runs the syntax checks, the app's type-check and unit tests, a dry run of every step, a real
-run of the file-only steps in a throwaway home, and a full run of the app itself. Needs
-node 22 or newer on PATH.
+Syntax, type-check, unit tests, a dry run of every step, a real run of the file-only steps in a
+throwaway home, and a full app run. Needs node 22 or newer on PATH.
 
-The app takes two flags for that last check: `--autostart` begins the run with the defaults and
-`--exit-when-done` quits when it finishes, so the test drives a real run without touching the
-keyboard. `--dry-run --autostart --exit-when-done` is also a handy way to preview a full run.
+`--autostart` starts the run with the defaults and `--exit-when-done` quits at the end, so
+`--dry-run --autostart --exit-when-done` previews a whole run without touching the keyboard.
 
-For a rehearsal on a truly fresh macOS, use a virtual machine: Parallels Desktop can download
-macOS itself. Give it 4 cores, 8 GB and a 100 GB disk, finish the macOS setup without an Apple
-ID, take a snapshot called "fresh", then run the one-liner inside. Anything wrong: revert to
-the snapshot, fix, push, run again. The VM cannot sign in to the App Store or run the Android
-emulator, and downloading Xcode through Xcodes needs an Apple ID, so leave those to the real Mac.
-
-Afterwards, check:
-
-```sh
-brew list --cask            # the apps you ticked
-mise ls                     # node, ruby, python, java, yarn, eas-cli
-node -v; ruby -v; python3 -V; java -version
-pod --version               # cocoapods on the mise ruby
-ls ~/.ssh                   # id_ed25519_github, id_ed25519_gitlab, config
-time zsh -i -c exit         # well under half a second
-```
+For a fresh-macOS rehearsal use a VM (Parallels can download macOS): 4 cores, 8 GB, 100 GB, skip
+the Apple ID, snapshot it as `fresh`, run the one-liner, revert and repeat as needed. A VM has no
+App Store and no Android emulator.
 
 ## Notes
 
-- **SSH keys.** Add the printed public keys to your accounts. With the GitHub CLI:
-  `gh auth login -s admin:public_key && gh ssh-key add ~/.ssh/id_ed25519_github.pub`.
-- **React Native on iOS.** Xcode runs its build scripts in a shell where mise is not
-  activated. Put `export NODE_BINARY="$(/opt/homebrew/bin/mise which node)"` in the
-  project's `.xcode.env.local`.
-- **Apps install one at a time**, each with its own download bar showing size, speed and time
-  left, and each finished item recording what it cost: `✓ Slack  (175 MB in 9s)`. Fetching them
-  all at once first was faster, and was reverted: it hid which app was being downloaded behind
-  one opaque total for minutes at a stretch.
-- **idb-companion** (iOS simulator automation) needs the full Xcode to build, so it is not in the
-  Brewfile. Once Xcode is installed: `brew install facebook/fb/idb-companion`.
-- **Android.** Android Studio's first-run wizard installs the SDK into
-  `~/Library/Android/sdk`, which is where the shell config already points.
-- **Coming from nvm, pyenv and rbenv.** Once mise has the runtimes, the old managers can go:
-  `brew uninstall pyenv pyenv-virtualenv rbenv ruby-build` and `rm -rf ~/.nvm ~/.pyenv ~/.rbenv`.
+- **SSH keys.** `gh auth login -s admin:public_key && gh ssh-key add ~/.ssh/id_ed25519_github.pub`
+- **React Native on iOS.** Xcode build scripts do not load mise. Put
+  `export NODE_BINARY="$(/opt/homebrew/bin/mise which node)"` in `.xcode.env.local`.
+- **Android.** Android Studio's first-run wizard installs the SDK to `~/Library/Android/sdk`,
+  where the shell config already points.
+- **idb-companion** needs full Xcode, so install it afterwards:
+  `brew install facebook/fb/idb-companion`
+- **Coming from nvm, pyenv, rbenv.** `brew uninstall pyenv pyenv-virtualenv rbenv ruby-build`
+  and `rm -rf ~/.nvm ~/.pyenv ~/.rbenv`
