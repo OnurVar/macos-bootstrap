@@ -51,7 +51,7 @@ Runs last, and on its own any time:
 
 ```sh
 cd ~/Downloads/macos-bootstrap
-./install.sh --yes --only verify
+./install.sh --only verify
 ```
 
 It checks inside a clean login shell, so it tests what a new terminal actually gets, not what
@@ -90,11 +90,11 @@ and report `✓ name` and `✗ name`, which the app counts. Helpers are in `lib/
 ## Without the app
 
 ```sh
-./install.sh --yes                    # everything
-./install.sh --yes --only ssh,apps    # these steps
-./install.sh --yes --select slack,gh  # these Brewfile names
-./install.sh --yes --dry-run          # preview
-./install.sh --list                   # step names
+./install.sh                     # everything
+./install.sh --only ssh,apps     # these steps
+./install.sh --select slack,gh   # these Brewfile names
+./install.sh --dry-run           # preview
+./install.sh --list              # step names
 ```
 
 ## Layout

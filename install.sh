@@ -2,10 +2,11 @@
 # macos-bootstrap without the app: runs the steps unattended. Handy for a scripted run,
 # a quick rerun of one step, or when the app cannot start.
 #
-#   ./install.sh --yes                     every step, every item
-#   ./install.sh --yes --only ssh,apps     only these steps (names from --list)
-#   ./install.sh --yes --select slack,gh   only these Brewfile names inside the item steps
-#   ./install.sh --yes --dry-run           show what would change, change nothing
+#   ./install.sh                           every step, every item
+#   ./install.sh --only ssh,apps           only these steps (names from --list)
+#   ./install.sh --only verify             just check what a new terminal gets
+#   ./install.sh --select slack,gh         only these Brewfile names inside the item steps
+#   ./install.sh --dry-run                 show what would change, change nothing
 #   ./install.sh --list                    the steps
 #
 # The SSH step reads two variables, because nothing here asks questions:
@@ -22,18 +23,17 @@ export BOOTSTRAP_DRY_RUN="${BOOTSTRAP_DRY_RUN:-0}"
 export BOOTSTRAP_SELECT="${BOOTSTRAP_SELECT:-}"
 only=""
 list=0
-yes=0
 
 while (( $# )); do
   case "$1" in
-    -y|--yes)     yes=1 ;;
+    -y|--yes)     ;;   # accepted and ignored: kept for bootstrap.sh and older habits
     -n|--dry-run) export BOOTSTRAP_DRY_RUN=1 ;;
     --only)       only="${2:-}"; shift ;;
     --only=*)     only="${1#--only=}" ;;
     --select)     export BOOTSTRAP_SELECT="${2:-}"; shift ;;
     --select=*)   export BOOTSTRAP_SELECT="${1#--select=}" ;;
     -l|--list)    list=1 ;;
-    -h|--help)    sed -n '2,15p' "$0" | sed -E 's/^# ?//'; exit 0 ;;
+    -h|--help)    sed -n '2,16p' "$0" | sed -E 's/^# ?//'; exit 0 ;;
     *)            print -u2 "Unknown option: $1 (try --help)"; exit 2 ;;
   esac
   shift
@@ -58,11 +58,6 @@ if (( list )); then
   done
   exit 0
 fi
-if (( ! yes )); then
-  sed -n '2,15p' "$0" | sed -E 's/^# ?//'
-  exit 2
-fi
-
 [[ -x /opt/homebrew/bin/brew || -x /usr/local/bin/brew ]] || { fail "Homebrew is not installed. Run bootstrap.sh first."; exit 1 }
 
 typeset -a selected

@@ -57,7 +57,7 @@ print "ok"
 
 step "dry run of every step in a throwaway home"
 mkdir -p "$tmp/dry"
-if ! HOME="$tmp/dry" BOOTSTRAP_EMAIL=test@example.com ./install.sh --yes --dry-run > "$tmp/dry.log" 2>&1; then
+if ! HOME="$tmp/dry" BOOTSTRAP_EMAIL=test@example.com ./install.sh --dry-run > "$tmp/dry.log" 2>&1; then
   cat "$tmp/dry.log"
   exit 1
 fi
@@ -68,8 +68,8 @@ print "ok"
 
 step "real run of Shell and SSH keys in a throwaway home, twice"
 mkdir -p "$tmp/real"
-HOME="$tmp/real" BOOTSTRAP_EMAIL=test@example.com BOOTSTRAP_PASSPHRASE=test ./install.sh --yes --only shell,ssh > "$tmp/real1.log" 2>&1
-HOME="$tmp/real" BOOTSTRAP_EMAIL=test@example.com ./install.sh --yes --only shell,ssh > "$tmp/real2.log" 2>&1
+HOME="$tmp/real" BOOTSTRAP_EMAIL=test@example.com BOOTSTRAP_PASSPHRASE=test ./install.sh --only shell,ssh > "$tmp/real1.log" 2>&1
+HOME="$tmp/real" BOOTSTRAP_EMAIL=test@example.com ./install.sh --only shell,ssh > "$tmp/real2.log" 2>&1
 cmp -s "$tmp/real/.zshrc" config/zshrc
 [[ -f "$tmp/real/.ssh/id_ed25519_github" && -f "$tmp/real/.ssh/id_ed25519_gitlab" ]]
 grep -q '^Host github.com' "$tmp/real/.ssh/config"
