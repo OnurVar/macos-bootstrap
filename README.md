@@ -18,15 +18,7 @@ unattended with no app.
 
 ## The app
 
-```
- macos-bootstrap 7904314 from 2026-09-07       macOS 26.6 · M4 Pro · 412 GB free
-┌ Steps ───────────────────┐┌ Log ─────────────────────────────────────────┐
-│   [x] System        ✓    ││ ==> Installing Slack  (5 of 26)              │
-│   [x] Shell         ✓    ││ Slack · ██████░░░░ 61% · 107 MB / 175 MB     │
-│ ▸ [x] Applications  5/26 ││ ✓ Figma  (128 MB in 7s)                      │
-└──────────────────────────┘└──────────────────────────────────────────────┘
- ████████░░░░░░░░ 12/32  Installing Slack
-```
+![The app part way through a run](docs/screenshot.png)
 
 `↑↓` move · `space` tick · `→←` item list · `a` all or none · `tab` detail or log ·
 `d` dry run · `enter` start · `ctrl-c` stop and quit · `q` quit
