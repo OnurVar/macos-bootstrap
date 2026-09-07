@@ -177,9 +177,10 @@ time zsh -i -c exit         # well under half a second
 - **React Native on iOS.** Xcode runs its build scripts in a shell where mise is not
   activated. Put `export NODE_BINARY="$(/opt/homebrew/bin/mise which node)"` in the
   project's `.xcode.env.local`.
-- **Apps download all at once.** The Applications and CLI tools steps fetch every ticked item in
-  one go, which Homebrew does in parallel, and install from the cache afterwards. The status line
-  shows how many downloads are done and how much has landed.
+- **Apps install one at a time**, each with its own download bar showing size, speed and time
+  left, and each finished item recording what it cost: `✓ Slack  (175 MB in 9s)`. Fetching them
+  all at once first was faster, and was reverted: it hid which app was being downloaded behind
+  one opaque total for minutes at a stretch.
 - **idb-companion** (iOS simulator automation) needs the full Xcode to build, so it is not in the
   Brewfile. Once Xcode is installed: `brew install facebook/fb/idb-companion`.
 - **Android.** Android Studio's first-run wizard installs the SDK into
