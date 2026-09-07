@@ -9,13 +9,19 @@
 #
 # Arguments go to the app, so a dry run is:
 #
-#   /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/OnurVar/macos-bootstrap/main/bootstrap.sh)" -- --dry-run
+#   /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/OnurVar/macos-bootstrap/main/bootstrap.sh)" --dry-run
 #
 # and an unattended run without the app is:
 #
-#   /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/OnurVar/macos-bootstrap/main/bootstrap.sh)" -- --yes
+#   /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/OnurVar/macos-bootstrap/main/bootstrap.sh)" --yes
 
 set -e -u -o pipefail
+
+# `zsh -c "<script>" --dry-run` puts the first argument in $0, not $1, so the flag would be
+# lost. Pick it up from there, which is what lets the one-liner take flags without a `--`.
+if [[ "${0:-}" == -* && "${0:-}" != "--" ]]; then
+  set -- "$0" "$@"
+fi
 
 repo="${BOOTSTRAP_REPO:-https://github.com/OnurVar/macos-bootstrap.git}"
 dest="${BOOTSTRAP_DIR:-$HOME/Downloads/macos-bootstrap}"

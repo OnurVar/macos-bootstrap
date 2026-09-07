@@ -13,8 +13,8 @@ Installs the Xcode Command Line Tools and Homebrew, downloads this repo to
 `~/Downloads/macos-bootstrap`, and opens the app. You click through one dialog and type your
 password once.
 
-Add `-- --dry-run` to preview without changing anything, or `-- --yes` to run everything
-unattended with no app.
+Add `--dry-run` to preview without changing anything, or `--yes` to run everything unattended
+with no app.
 
 ## The app
 
