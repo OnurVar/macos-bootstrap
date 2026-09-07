@@ -125,6 +125,17 @@ human_kb() {
   fi
 }
 
+# bar <percent> [width]: a text meter, e.g. ███░░░░░░░░░░░
+bar() {
+  local pct=$1 width=${2:-14} filled f="" e=""
+  (( pct < 0 )) && pct=0
+  (( pct > 100 )) && pct=100
+  filled=$(( pct * width / 100 ))
+  (( filled > 0 )) && f="${(l:$filled::█:)}"
+  (( width - filled > 0 )) && e="${(l:$(( width - filled ))::░:)}"
+  printf '%s%s' "$f" "$e"
+}
+
 human_secs() {
   local s=$1
   if (( s >= 3600 )); then
@@ -200,11 +211,12 @@ prefetch() {
     elapsed=$(( $(date +%s) - started ))
     (( elapsed < 1 )) && elapsed=1
     rate_kbs=$(( kb / elapsed ))
-    detail="$(human_kb "$kb")"
     if (( total_kb > 0 )); then
       pct=$(( kb * 100 / total_kb ))
       (( pct > 99 )) && pct=99
-      detail="$detail of $(human_kb "$total_kb") ($pct%)"
+      detail="$(bar "$pct") $pct% · $(human_kb "$kb") / $(human_kb "$total_kb")"
+    else
+      detail="$(human_kb "$kb")"
     fi
     if (( rate_kbs > 0 )); then
       detail="$detail · $(human_kb "$rate_kbs")/s"
@@ -213,7 +225,7 @@ prefetch() {
         detail="$detail · $(human_secs "$left") left"
       fi
     fi
-    progress "$finished of $total $what · $detail"
+    progress "$detail · $finished/$total $what"
   done
   wait "$pid" || true
   progress_end
