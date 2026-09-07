@@ -33,6 +33,28 @@ command -v node >/dev/null || { print -u2 "node is not on PATH"; exit 1 }
 step "install.sh --list"
 ./install.sh --list
 
+# The steps run under `set -e -u -o pipefail`; the helpers must work there, not just in a
+# plain shell. bar() used the nameless ${(l:N::x:)} padding, which passed a loose test and
+# then failed on every progress tick of a real run with "parameter not set".
+step "shell helpers under the flags a step actually uses"
+cat > "$tmp/helpers.zsh" <<'HELPERS'
+set -e -u -o pipefail
+source "$BOOTSTRAP_ROOT/lib/common.sh"
+for pct in 0 1 27 50 99 100 150 -5; do
+  out="$(bar $pct 14)"
+  [[ ${#out} -eq 14 ]] || { print -u2 "bar $pct gave ${#out} chars, expected 14"; exit 1 }
+done
+for kb in 0 1 1023 1024 5000 1048576 9999999; do human_kb $kb >/dev/null; done
+for s in 0 5 59 60 90 3599 3600 90000; do human_secs $s >/dev/null; done
+progress "$(bar 27 14) 27% · 1.2 GB / 4.4 GB · 21 MB/s · 2m left · 7/29 apps" >/dev/null
+progress_end >/dev/null
+HELPERS
+if ! BOOTSTRAP_ROOT="$root" zsh "$tmp/helpers.zsh"; then
+  print -u2 "a shell helper breaks under the flags the steps use"
+  exit 1
+fi
+print "ok"
+
 step "dry run of every step in a throwaway home"
 mkdir -p "$tmp/dry"
 if ! HOME="$tmp/dry" BOOTSTRAP_EMAIL=test@example.com ./install.sh --yes --dry-run > "$tmp/dry.log" 2>&1; then

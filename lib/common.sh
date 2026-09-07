@@ -127,12 +127,14 @@ human_kb() {
 
 # bar <percent> [width]: a text meter, e.g. ███░░░░░░░░░░░
 bar() {
-  local pct=$1 width=${2:-14} filled f="" e=""
+  # The padding flag needs a named parameter: with `set -u`, which every step runs under,
+  # the nameless form ${(l:N::x:)} fails with "parameter not set".
+  local pct=$1 width=${2:-14} filled pad="" f="" e=""
   (( pct < 0 )) && pct=0
   (( pct > 100 )) && pct=100
   filled=$(( pct * width / 100 ))
-  (( filled > 0 )) && f="${(l:$filled::█:)}"
-  (( width - filled > 0 )) && e="${(l:$(( width - filled ))::░:)}"
+  (( filled > 0 )) && f="${(l:$filled::█:)pad}"
+  (( width - filled > 0 )) && e="${(l:$(( width - filled ))::░:)pad}"
   printf '%s%s' "$f" "$e"
 }
 
