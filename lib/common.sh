@@ -165,6 +165,7 @@ item_size_kb() {
 # install_one <kind> <name> <label>: install a single item while showing how its download is
 # going. One at a time on purpose: knowing which app is being fetched, and how far along it is,
 # is worth more than the seconds saved by downloading them all at once behind one opaque total.
+ITEM_DETAIL=""
 install_one() {
   local kind="$1" name="$2" label="$3"
   local cache before size_kb pid now kb started elapsed rate_kbs pct left detail rc
@@ -207,6 +208,15 @@ install_one() {
   wait "$pid"
   rc=$?
   progress_end
+  # Leave the size and time in the log, so the finished list still says what each app cost.
+  now="${$(du -sk "$cache" 2>/dev/null | cut -f1):-$before}"
+  kb=$(( now - before ))
+  elapsed=$(( $(date +%s) - started ))
+  if (( rc == 0 && kb > 512 )); then
+    ITEM_DETAIL="$(human_kb "$kb") in $(human_secs $(( elapsed > 0 ? elapsed : 1 )))"
+  else
+    ITEM_DETAIL=""
+  fi
   return $rc
 }
 
@@ -256,6 +266,10 @@ install_from_brewfile() {
     elif ! install_one "$kind" "$name" "$label"; then
       fail "$label"
       failed=$((failed + 1))
+      continue
+    fi
+    if [[ -n "${ITEM_DETAIL:-}" ]]; then
+      ok "$label  ($ITEM_DETAIL)"
       continue
     fi
     ok "$label"
