@@ -149,93 +149,69 @@ human_secs() {
   fi
 }
 
-# download_total_kb <kind> <name>...: how big the downloads are, by asking each server for the
-# size. Best effort: servers that do not answer just leave the total lower, and 0 means the
-# progress line falls back to counting bytes without a percentage.
-download_total_kb() {
-  local kind="$1"
-  shift
-  local -a urls
-  urls=(${(f)"$(brew info --"$kind" --json=v2 "$@" 2>/dev/null | jq -r '.casks[]?.url // empty' 2>/dev/null)"})
-  if (( ! $#urls )); then
+# item_size_kb <kind> <name>: how big this download is, by asking the server. 0 when unknown,
+# which just means the bar is left out.
+item_size_kb() {
+  local url len
+  url="$(brew info --"$1" --json=v2 "$2" 2>/dev/null | jq -r '.casks[]?.url // empty' 2>/dev/null)"
+  if [[ -z "$url" ]]; then
     print 0
     return 0
   fi
-  local tmp u n=0 total=0 f
-  tmp="$(mktemp -d)"
-  for u in "${urls[@]}"; do
-    n=$(( n + 1 ))
-    ( curl -sIL --max-time 8 "$u" 2>/dev/null | grep -i '^content-length:' | tail -1 | tr -dc '0-9' > "$tmp/$n" ) &
-  done
-  wait
-  for f in "$tmp"/*(N); do
-    total=$(( total + ${$(<"$f"):-0} ))
-  done
-  rm -rf "$tmp"
-  print $(( total / 1024 ))
+  len="$(curl -sIL --max-time 8 "$url" 2>/dev/null | grep -i '^content-length:' | tail -1 | tr -dc '0-9')"
+  print $(( ${len:-0} / 1024 ))
 }
 
-# prefetch <brew|cask> <what> <name>...: download everything in one `brew fetch`, which
-# Homebrew runs in parallel, while reporting how far along it is and how fast.
-# Failures are not reported here; the install loop retries each item and reports it properly.
-prefetch() {
-  local kind="$1" what="$2"
-  shift 2
-  local -a names
-  names=("$@")
-  local total=$#names cache out pid before now kb marks manifests finished
-  local total_kb=0 started elapsed rate_kbs left pct detail
+# install_one <kind> <name> <label>: install a single item while showing how its download is
+# going. One at a time on purpose: knowing which app is being fetched, and how far along it is,
+# is worth more than the seconds saved by downloading them all at once behind one opaque total.
+install_one() {
+  local kind="$1" name="$2" label="$3"
+  local cache before size_kb pid now kb started elapsed rate_kbs pct left detail rc
   cache="$(brew --cache 2>/dev/null)/downloads"
-  out="$(mktemp)"
   before="${$(du -sk "$cache" 2>/dev/null | cut -f1):-0}"
+  size_kb="$(item_size_kb "$kind" "$name")"
 
-  progress "Checking the size of $total $what"
-  total_kb="$(download_total_kb "$kind" "${names[@]}")"
-  if (( total_kb > 0 )); then
-    say "Downloading $total $what at once, $(human_kb "$total_kb")"
+  if [[ "$kind" == cask ]]; then
+    brew install --cask --adopt --quiet "$name" >/dev/null 2>&1 &
   else
-    say "Downloading $total $what at once"
+    brew install --quiet "$name" >/dev/null 2>&1 &
   fi
-
-  started="$(date +%s)"
-  brew fetch --"$kind" "${names[@]}" >"$out" 2>&1 &
   pid=$!
+  started="$(date +%s)"
   while kill -0 "$pid" 2>/dev/null; do
-    sleep 2
+    sleep 1
     now="${$(du -sk "$cache" 2>/dev/null | cut -f1):-$before}"
     kb=$(( now - before ))
     (( kb < 0 )) && kb=0
-    (( total_kb > 0 && kb > total_kb )) && kb=$total_kb
-    marks="$(grep -cE '^(✔︎|✘)' "$out" 2>/dev/null || true)"
-    manifests="$(grep -c 'Bottle Manifest' "$out" 2>/dev/null || true)"
-    finished=$(( ${marks:-0} - ${manifests:-0} ))
-    (( finished < 0 )) && finished=0
+    (( size_kb > 0 && kb > size_kb )) && kb=$size_kb
     elapsed=$(( $(date +%s) - started ))
     (( elapsed < 1 )) && elapsed=1
     rate_kbs=$(( kb / elapsed ))
-    if (( total_kb > 0 )); then
-      pct=$(( kb * 100 / total_kb ))
+    if (( size_kb > 0 && kb > 0 )); then
+      pct=$(( kb * 100 / size_kb ))
       (( pct > 99 )) && pct=99
-      detail="$(bar "$pct") $pct% · $(human_kb "$kb") / $(human_kb "$total_kb")"
-    else
-      detail="$(human_kb "$kb")"
-    fi
-    if (( rate_kbs > 0 )); then
-      detail="$detail · $(human_kb "$rate_kbs")/s"
-      if (( total_kb > kb )); then
-        left=$(( (total_kb - kb) / rate_kbs ))
-        detail="$detail · $(human_secs "$left") left"
+      detail="$(bar "$pct") $pct% · $(human_kb "$kb") / $(human_kb "$size_kb")"
+      if (( rate_kbs > 0 )); then
+        detail="$detail · $(human_kb "$rate_kbs")/s"
+        (( size_kb > kb )) && detail="$detail · $(human_secs $(( (size_kb - kb) / rate_kbs )) ) left"
       fi
+    elif (( kb > 0 )); then
+      detail="$(human_kb "$kb") downloaded"
+    else
+      # Nothing new on disk: already in the cache, so this is the install itself.
+      detail="installing"
     fi
-    progress "$detail · $finished/$total $what"
+    progress "$label · $detail"
   done
-  wait "$pid" || true
+  wait "$pid"
+  rc=$?
   progress_end
-  rm -f "$out"
+  return $rc
 }
 
-# install_from_brewfile <brew|cask>: download every selected entry at once, then install them
-# one by one from the cache, so one failure cannot stop the rest. Prints one ✓ or ✗ per item.
+# install_from_brewfile <brew|cask>: install the selected entries one at a time, showing each
+# download as it happens, so one failure cannot stop the rest. Prints one ✓ or ✗ per item.
 install_from_brewfile() {
   local kind="$1" what
   local -a installed todo todo_labels
@@ -267,23 +243,20 @@ install_from_brewfile() {
     return 0
   fi
 
-  # The downloads are the slow part, so do them all together first.
-  if (( $#todo > 1 )); then
-    if (( DRY )); then
-      run brew fetch --"$kind" "${todo[@]}"
-    else
-      prefetch "$kind" "$what" "${todo[@]}"
-    fi
-  fi
-
   for (( i = 1; i <= $#todo; i++ )); do
     name="${todo[$i]}"
     label="${todo_labels[$i]}"
-    say "Installing $label"
-    if [[ "$kind" == cask ]]; then
-      run brew install --cask --adopt --quiet "$name" || { fail "$label"; failed=$((failed + 1)); continue }
-    else
-      run brew install --quiet "$name" || { fail "$label"; failed=$((failed + 1)); continue }
+    say "Installing $label  ($i of $#todo)"
+    if (( DRY )); then
+      if [[ "$kind" == cask ]]; then
+        run brew install --cask --adopt --quiet "$name"
+      else
+        run brew install --quiet "$name"
+      fi
+    elif ! install_one "$kind" "$name" "$label"; then
+      fail "$label"
+      failed=$((failed + 1))
+      continue
     fi
     ok "$label"
   done
