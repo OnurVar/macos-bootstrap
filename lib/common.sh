@@ -125,8 +125,45 @@ human_kb() {
   fi
 }
 
+human_secs() {
+  local s=$1
+  if (( s >= 3600 )); then
+    printf '%dh %dm' $(( s / 3600 )) $(( (s % 3600) / 60 ))
+  elif (( s >= 60 )); then
+    printf '%dm' $(( (s + 59) / 60 ))
+  else
+    printf '%ds' "$s"
+  fi
+}
+
+# download_total_kb <kind> <name>...: how big the downloads are, by asking each server for the
+# size. Best effort: servers that do not answer just leave the total lower, and 0 means the
+# progress line falls back to counting bytes without a percentage.
+download_total_kb() {
+  local kind="$1"
+  shift
+  local -a urls
+  urls=(${(f)"$(brew info --"$kind" --json=v2 "$@" 2>/dev/null | jq -r '.casks[]?.url // empty' 2>/dev/null)"})
+  if (( ! $#urls )); then
+    print 0
+    return 0
+  fi
+  local tmp u n=0 total=0 f
+  tmp="$(mktemp -d)"
+  for u in "${urls[@]}"; do
+    n=$(( n + 1 ))
+    ( curl -sIL --max-time 8 "$u" 2>/dev/null | grep -i '^content-length:' | tail -1 | tr -dc '0-9' > "$tmp/$n" ) &
+  done
+  wait
+  for f in "$tmp"/*(N); do
+    total=$(( total + ${$(<"$f"):-0} ))
+  done
+  rm -rf "$tmp"
+  print $(( total / 1024 ))
+}
+
 # prefetch <brew|cask> <what> <name>...: download everything in one `brew fetch`, which
-# Homebrew runs in parallel, while reporting how many are done and how much has landed.
+# Homebrew runs in parallel, while reporting how far along it is and how fast.
 # Failures are not reported here; the install loop retries each item and reports it properly.
 prefetch() {
   local kind="$1" what="$2"
@@ -134,25 +171,49 @@ prefetch() {
   local -a names
   names=("$@")
   local total=$#names cache out pid before now kb marks manifests finished
+  local total_kb=0 started elapsed rate_kbs left pct detail
   cache="$(brew --cache 2>/dev/null)/downloads"
   out="$(mktemp)"
-  before="$(du -sk "$cache" 2>/dev/null | cut -f1)"
-  before="${before:-0}"
-  say "Downloading $total $what at once"
+  before="${$(du -sk "$cache" 2>/dev/null | cut -f1):-0}"
+
+  progress "Checking the size of $total $what"
+  total_kb="$(download_total_kb "$kind" "${names[@]}")"
+  if (( total_kb > 0 )); then
+    say "Downloading $total $what at once, $(human_kb "$total_kb")"
+  else
+    say "Downloading $total $what at once"
+  fi
+
+  started="$(date +%s)"
   brew fetch --"$kind" "${names[@]}" >"$out" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
     sleep 2
-    now="$(du -sk "$cache" 2>/dev/null | cut -f1)"
-    now="${now:-$before}"
+    now="${$(du -sk "$cache" 2>/dev/null | cut -f1):-$before}"
     kb=$(( now - before ))
-    if (( kb < 0 )); then
-      kb=0
-    fi
+    (( kb < 0 )) && kb=0
+    (( total_kb > 0 && kb > total_kb )) && kb=$total_kb
     marks="$(grep -cE '^(✔︎|✘)' "$out" 2>/dev/null || true)"
     manifests="$(grep -c 'Bottle Manifest' "$out" 2>/dev/null || true)"
     finished=$(( ${marks:-0} - ${manifests:-0} ))
-    progress "Downloading $finished of $total $what · $(human_kb "$kb") so far"
+    (( finished < 0 )) && finished=0
+    elapsed=$(( $(date +%s) - started ))
+    (( elapsed < 1 )) && elapsed=1
+    rate_kbs=$(( kb / elapsed ))
+    detail="$(human_kb "$kb")"
+    if (( total_kb > 0 )); then
+      pct=$(( kb * 100 / total_kb ))
+      (( pct > 99 )) && pct=99
+      detail="$detail of $(human_kb "$total_kb") ($pct%)"
+    fi
+    if (( rate_kbs > 0 )); then
+      detail="$detail · $(human_kb "$rate_kbs")/s"
+      if (( total_kb > kb )); then
+        left=$(( (total_kb - kb) / rate_kbs ))
+        detail="$detail · $(human_secs "$left") left"
+      fi
+    fi
+    progress "$finished of $total $what · $detail"
   done
   wait "$pid" || true
   progress_end
