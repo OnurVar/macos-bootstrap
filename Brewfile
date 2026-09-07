@@ -44,4 +44,3 @@ cask "tg-pro"             # TG Pro | Utilities
 cask "openvpn-connect"    # OpenVPN Connect | Utilities
 cask "realvnc-connect"    # RealVNC Connect (viewer and server) | Utilities
 
-cask "paintbrush"         # Paintbrush | Office
