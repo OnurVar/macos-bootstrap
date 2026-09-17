@@ -24,6 +24,7 @@ cask "visual-studio-code" # Visual Studio Code | Daily
 cask "slack"              # Slack | Daily
 cask "spotify"            # Spotify | Daily
 cask "claude"             # Claude | Daily
+cask "claude-code"        # Claude Code | Daily
 cask "superwhisper"       # Superwhisper | Daily
 cask "notion"             # Notion | Daily
 cask "google-drive"       # Google Drive | Daily

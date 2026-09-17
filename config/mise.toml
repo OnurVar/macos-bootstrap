@@ -10,6 +10,6 @@ idiomatic_version_file_enable_tools = ["node", "ruby", "python"]
 node = "24"              # active LTS; bootstrap.sh runs the app on this one
 ruby = "3.4"
 python = "3.13"
-java = "zulu-17"         # what React Native and the Android Gradle plugin expect
+java = "temurin-21"      # OpenJDK 21 LTS (Eclipse Temurin), what current React Native and the Android Gradle plugin expect
 "npm:yarn" = "latest"
 "npm:eas-cli" = "latest"
