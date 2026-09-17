@@ -9,7 +9,9 @@
 # ---- CLI tools ----
 brew "gh"                          # GitHub CLI | Git
 brew "git-lfs"                     # Git LFS | Git
+brew "glab"                        # GitLab CLI | Git
 brew "watchman"                    # Watchman (file watcher for React Native) | Mobile
+brew "mobile-dev-inc/tap/maestro"  # Maestro (mobile E2E testing) | Mobile
 brew "uv"                          # uv (Python packages and tools) | Python
 brew "asitop"                      # asitop (Apple Silicon performance monitor) | System
 brew "mole"                        # mole (Mac cleaner) | System
